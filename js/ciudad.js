@@ -327,7 +327,7 @@
     return { k: k, x: x, y: E.sy(l, 0.45), s: s };
   };
   // los coches y la gente de la calle
-  var COCHES = [], GENTE = [], ONDAS = [], VAPOR = [];
+  var COCHES = C.COCHES = [], GENTE = [], ONDAS = [], VAPOR = [];   // (el sonido lee C.COCHES para el tráfico)
   (function () {
     for (var i = 0; i < 4; i++) COCHES.push({ fase: i * 0.27 + 0.1, carril: i % 2, tipo: i % 3 === 1 ? 'minibus' : 'taxi', vel: 0.05 + (i % 2) * 0.012 });
     var COL = ['#ff2bd6', '#33f0ff', '#ffe14d', '#e8e0ff', '#ff3b4f', null, '#4dff88'];

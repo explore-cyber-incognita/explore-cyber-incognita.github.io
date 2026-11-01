@@ -1,7 +1,10 @@
 /* Cyber Incognita · sonido
    Todo sintetizado con Web Audio, sin archivos (como en Iaponia y Pascua):
    - la lluvia (sube y baja con la de la ciudad), el zumbido grave de la ciudad, el de los neones, los truenos después de
-     cada relámpago, los 747 que pasan (más fuerte cuanto más cerca y más arriba estás) y los coches por la calzada mojada;
+     cada relámpago y los 747 que pasan (más fuerte cuanto más cerca y más arriba estás);
+   - abajo, el tráfico: cada taxi, minibús y el autobús de dos pisos suena donde está (motor, ruedas en el agua, a la
+     izquierda o a la derecha) y de vez en cuando pita un claxon; y la gente: voces que charlan, ríen y pregonan, con la
+     melodía de una lengua tonal como el cantonés (más fuerte en la calle, flojas desde las ventanas);
    - una banda de sintetizador lenta, a lo Vangelis: cuatro voces de sierras desafinadas por un filtro que respira, con
      notas sueltas de campana encima (la menor pentatónica);
    - al descubrir un secreto, un chispazo de neón y un acorde; cada escena con lo suyo (la estática, la moto, el derribo…).
@@ -12,7 +15,7 @@
   var NI = window.NI, E = NI.motor, U = NI.util, C = NI.ciudad, CLAVE = 'cyber-incognita.sonido';
   var S = NI.sonido = { activo: false };
   var ac = null, master, salaEnv, ruido, musica, AMB = null, bus = null, escBus = null;
-  var lluvia, ciudad, neon, jet, silbido, voces = [], filtroPad;
+  var lluvia, ciudad, neon, jet, silbido, voces = [], filtroPad, trafico = [], bus2 = null, gente = null, murmullo = null, hablantes = [];
   // la menor pentatónica, para las notas sueltas
   var PENTA = [440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5];
   // los acordes de la banda (graves a agudos): la m9, fa maj7, do maj7 / sol, mi m7
@@ -35,6 +38,14 @@
     neon = ac.createGain(); neon.gain.value = 0; o.connect(f); f.connect(neon); neon.connect(master); o.start();
     // el silbido de las turbinas, que baja de tono al pasar (Doppler)
     silbido = ac.createOscillator(); silbido.type = 'sine'; silbido.frequency.value = 2100; var sg = ac.createGain(); sg.gain.value = 0; silbido.connect(sg); sg.connect(master); silbido.start(); silbido.g = sg;
+    // el tráfico: una voz por coche (motor + ruedas en el asfalto mojado), cada una con su sitio en el estéreo
+    C.COCHES.forEach(function (co) { trafico.push(vozCoche(co.tipo === 'minibus' ? 62 : 74, 0.5)); });
+    bus2 = vozCoche(44, 0.8);
+    // la gente: un canal con eco de calle, el murmullo de fondo y seis personas que hablan a ratos
+    gente = ac.createGain(); gente.gain.value = 0; var gf = ac.createBiquadFilter(); gf.type = 'lowpass'; gf.frequency.value = 2800;
+    gente.connect(gf); gf.connect(master); var gs = ac.createGain(); gs.gain.value = 0.5; gf.connect(gs); gs.connect(salaEnv);
+    murmullo = bucle('bandpass', 520, 0.9, 3.1); murmullo.g.disconnect(); murmullo.g.connect(gente);
+    for (var h = 0; h < 6; h++) hablantes.push({ prox: 1 + Math.random() * 4, f0: h % 2 ? 105 + Math.random() * 25 : 185 + Math.random() * 40, pan: -0.8 + h * 0.32 });
     // la banda: cuatro voces, cada una dos sierras desafinadas, por un filtro que respira
     filtroPad = ac.createBiquadFilter(); filtroPad.type = 'lowpass'; filtroPad.frequency.value = 700; filtroPad.Q.value = 0.8;
     var pad = ac.createGain(); pad.gain.value = 0.022; filtroPad.connect(pad); pad.connect(musica);
@@ -95,8 +106,57 @@
   function acorde(t, notas, dur, vol, filtro) { notas.forEach(function (f) { [-7, 7].forEach(function (c) { var o = tono('sawtooth', f, t, dur, vol, { ataque: dur * 0.3, filtro: filtro || 1100, sala: 0.9 }); o.detune.value = c; }); }); }
   function trueno(t, vol) { golpe(t, 3.4, 140, vol, 'lowpass', { ataque: 0.08 }); golpe(t + 0.2, 2.2, 80, vol * 0.8, 'lowpass', { ataque: 0.3 }); golpe(t, 0.5, 1200, vol * 0.3, 'lowpass'); }
 
+  /* --- el tráfico de la calle --- */
+  function panner(v) { if (ac.createStereoPanner) { var p = ac.createStereoPanner(); p.pan.value = v || 0; return p; } var g = ac.createGain(); g.pan = { setTargetAtTime: function () {} }; return g; }
+  // una voz de coche: el motor (dos sierras graves por un pasa-bajos) y el siseo de las ruedas en el agua
+  function vozCoche(f, cuerpo) {
+    var p = panner(0); p.connect(master);
+    var o = ac.createOscillator(), o2 = ac.createOscillator(), fl = ac.createBiquadFilter(), gm = ac.createGain();
+    o.type = 'sawtooth'; o2.type = 'sawtooth'; o.frequency.value = f; o2.frequency.value = f * 1.5; o2.detune.value = 9; fl.type = 'lowpass'; fl.frequency.value = 260; fl.Q.value = 1.2; gm.gain.value = 0;
+    o.connect(fl); o2.connect(fl); fl.connect(gm); gm.connect(p); o.start(); o2.start();
+    var s = ac.createBufferSource(); s.buffer = ruido; s.loop = true; var fr = ac.createBiquadFilter(); fr.type = 'bandpass'; fr.frequency.value = 1100; fr.Q.value = 0.6; var gr = ac.createGain(); gr.gain.value = 0;
+    s.connect(fr); fr.connect(gr); gr.connect(p); s.start(0, Math.random() * 3);
+    return { o: o, o2: o2, f: f, gm: gm, gr: gr, fr: fr, p: p, cuerpo: cuerpo };
+  }
+  function moverCoche(v, sx, dir, fuerza, t) {
+    var dx = (sx - E.W / 2) / (E.W / 2), prox = U.clamp(1 - Math.abs(dx) / 1.25, 0, 1), g = prox * prox * fuerza;
+    var acerca = (dx < 0 && dir > 0) || (dx > 0 && dir < 0) ? 1.05 : 0.95;   // el Doppler: más agudo al venir
+    v.gm.gain.setTargetAtTime(g * 0.09 * v.cuerpo, t, 0.08); v.gr.gain.setTargetAtTime(g * (0.08 + C.lluvia * 0.06), t, 0.08);
+    v.o.frequency.setTargetAtTime(v.f * acerca, t, 0.2); v.o2.frequency.setTargetAtTime(v.f * 1.5 * acerca, t, 0.2);
+    v.fr.frequency.setTargetAtTime(900 + prox * 900, t, 0.1);
+    if (v.p.pan) v.p.pan.setTargetAtTime(U.clamp(dx, -1, 1), t, 0.08);
+  }
+  // el claxon de un taxi de Hong Kong: dos tonos cortos
+  function claxon(t, vol, pan) {
+    var p = panner(pan); p.connect(master); var g2 = ac.createGain(); g2.gain.value = 0.3; p.connect(g2); g2.connect(salaEnv);
+    [[0, 0.16], [0.24, 0.32]].forEach(function (q) {
+      [415, 523].forEach(function (f) { var o = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain(); o.type = 'square'; o.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = 1600; meseta(g, t + q[0], t + q[0] + 0.01, t + q[1] - 0.02, t + q[1], vol); o.connect(fl); fl.connect(g); g.connect(p); o.start(t + q[0]); o.stop(t + q[1] + 0.02); });
+    });
+  }
+
+  /* --- la gente: frases inventadas con la melodía de una lengua tonal --- */
+  var VOCALES = [[800, 1250], [500, 1850], [320, 2250], [520, 920], [350, 800], [650, 1500]];
+  var TONOS = [[1.25, 1.25], [1, 1], [0.85, 0.85], [0.92, 1.2], [1.22, 0.86], [1.05, 0.95]];   // alto, medio, bajo, sube, baja, cae un poco
+  function frase(h, t, vol, n) {
+    var o = ac.createOscillator(), f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(), g = ac.createGain(), p = panner(h.pan + (Math.random() - 0.5) * 0.3);
+    o.type = 'sawtooth'; f1.type = 'bandpass'; f2.type = 'bandpass'; f1.Q.value = 7; f2.Q.value = 9;
+    var g2 = ac.createGain(); g2.gain.value = 0.55; o.connect(f1); o.connect(f2); f2.connect(g2); f1.connect(g); g2.connect(g); g.connect(p); p.connect(gente);
+    g.gain.setValueAtTime(0, t); var s = t, f0 = h.f0 * (0.95 + Math.random() * 0.1);
+    for (var k = 0; k < n; k++) {
+      var d = 0.11 + Math.random() * 0.12, v = VOCALES[Math.floor(Math.random() * VOCALES.length)], tn = TONOS[Math.floor(Math.random() * TONOS.length)], caida = 1 - k / n * 0.12;
+      o.frequency.setValueAtTime(f0 * tn[0] * caida, s); o.frequency.linearRampToValueAtTime(f0 * tn[1] * caida, s + d);
+      f1.frequency.setValueAtTime(v[0], s); f2.frequency.setValueAtTime(v[1], s);
+      // cada sílaba: una consonante breve (silencio) y la vocal que entra y se va
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vol, s + 0.025); g.gain.setValueAtTime(vol, s + d * 0.7); g.gain.linearRampToValueAtTime(0, s + d);
+      s += d + (Math.random() < 0.15 ? 0.18 : 0.02);
+    }
+    o.start(t); o.stop(s + 0.05);
+    return s;
+  }
+  function risa(h, t, vol) { var s = t; for (var k = 0; k < 5; k++) { var o = ac.createOscillator(), f1 = ac.createBiquadFilter(), g = ac.createGain(), p = panner(h.pan); o.type = 'sawtooth'; o.frequency.setValueAtTime(h.f0 * (1.5 - k * 0.08), s); f1.type = 'bandpass'; f1.frequency.value = 900; f1.Q.value = 4; env(g, s, 0.02, vol, 0.14); o.connect(f1); f1.connect(g); g.connect(p); p.connect(gente); o.start(s); o.stop(s + 0.16); golpe(s, 0.08, 1500, vol * 0.3, 'bandpass'); s += 0.17; } }
+
   /* --- lo que suena solo --- */
-  var proxCoche = 3, proxNota = 5, proxAcorde = 0, acordeN = 0, ultimoRayo = -1e9, proxChisporroteo = 4;
+  var proxCoche = 3, proxClaxon = 6, proxPregon = 10, proxNota = 5, proxAcorde = 0, acordeN = 0, ultimoRayo = -1e9, proxChisporroteo = 4;
   function actualizar() {
     if (!ac || !S.activo) return;
     var t = ac.currentTime, l = E.centro(), esc = !!E.escena, enCalle = U.clamp((l - 2.9) / 0.6, 0, 1), enFachada = U.clamp(1 - Math.abs(l - 2.2) / 1.2, 0, 1);
@@ -114,12 +174,35 @@
     if (av) silbido.frequency.setTargetAtTime(av.x > E.W / 2 ? 2300 : 1900, t, 0.4);
     // los truenos, un poco después de cada relámpago
     if (C.relampago.t !== ultimoRayo) { if (ultimoRayo > -1e9 && E.t - C.relampago.t < 1000) trueno(t + 1.2 + Math.random() * 1.5, 0.5); ultimoRayo = C.relampago.t; }
-    // los coches por la calzada mojada
-    if (t > proxCoche) { if (enCalle > 0.1) golpe(t, 2.4, 500, 0.06 * enCalle, 'bandpass', { ataque: 1.1, f2: 1800, barre: 1.2, q: 0.8 }); proxCoche = t + 2.5 + Math.random() * 4; }
+    // el tráfico: cada coche suena donde está (los mismos cálculos que los dibuja ciudad.js), y el autobús (vida.js)
+    var parado = !!C.sinTrafico, u = E.u, ti = E.t, lim2 = E.W / 2 / u + 0.4;
+    C.COCHES.forEach(function (co, i) {
+      var k2 = ((ti / 1000 * co.vel) + co.fase) % 1, dir = co.carril ? -1 : 1, xu2 = dir > 0 ? U.lerp(-lim2, lim2, k2) : U.lerp(lim2, -lim2, k2);
+      moverCoche(trafico[i], E.sx(xu2), dir, parado ? 0 : enCalle * (co.carril ? 1 : 0.85), t);
+    });
+    var kb = ((ti + 12000) % 40000) / 11000;
+    moverCoche(bus2, kb < 1 ? E.sx(U.lerp(-E.W / 2 / u - 0.4, E.W / 2 / u + 0.4, kb)) : -1e5, 1, parado ? 0 : enCalle * 1.3, t);
+    // más lejos, el tráfico de Kowloon que no se ve: pasadas suaves de vez en cuando
+    if (t > proxCoche) { golpe(t, 2.6, 450, (0.015 + 0.03 * enCalle), 'bandpass', { ataque: 1.2, f2: 1300, barre: 1.3, q: 0.8 }); proxCoche = t + 2 + Math.random() * 3.5; }
+    if (t > proxClaxon) { if (enCalle > 0.4 && !esc && !parado) claxon(t, 0.035 * enCalle, (Math.random() - 0.5) * 1.4); proxClaxon = t + 9 + Math.random() * 16; }
+    // la gente: fuerte en la calle y las tiendas, flojita desde las ventanas; casi nada en la azotea
+    var cerca = U.clamp(Math.max(enCalle, enFachada * 0.3, l < 1.1 ? 0.15 : 0), 0, 1);
+    gente.gain.setTargetAtTime(cerca * (esc ? 0.25 : 1), t, 0.6);
+    murmullo.g.gain.setTargetAtTime(0.03 + enCalle * 0.05 + 0.015 * Math.sin(t * 0.5), t, 0.5);
+    murmullo.f.frequency.setTargetAtTime(480 + 160 * Math.sin(t * 1.7), t, 0.15);
+    hablantes.forEach(function (h) {
+      if (t < h.prox) return;
+      var r = Math.random(), fin;
+      if (r < 0.1) { risa(h, t, 0.07); fin = t + 0.9; }
+      else fin = frase(h, t, 0.05 + Math.random() * 0.035, 3 + Math.floor(Math.random() * 8));
+      h.prox = fin + 0.6 + Math.random() * 3.5;
+    });
+    // el del carrito de bolas de pescado pregona de vez en cuando (una frase larga, más alta)
+    if (t > proxPregon) { if (enCalle > 0.5 && !esc) frase({ f0: 150, pan: 0.2 }, t, 0.1, 6); proxPregon = t + 18 + Math.random() * 20; }
     // un neón que chisporrotea de vez en cuando
     if (t > proxChisporroteo) { if (enFachada > 0.3 && !esc) for (var k = 0; k < 3; k++) golpe(t + k * 0.06, 0.04, 4000, 0.02 * enFachada, 'bandpass'); proxChisporroteo = t + 5 + Math.random() * 9; }
     // la banda: cambia de acorde cada nueve segundos, y de vez en cuando una campana
-    musica.gain.setTargetAtTime(esc ? 0.25 : 1, t, 0.6);
+    musica.gain.setTargetAtTime(esc ? 0.25 : 1 - enCalle * 0.45, t, 0.6);   // en la calle manda el tráfico
     if (t > proxAcorde) {
       var A = ACORDES[acordeN++ % ACORDES.length];
       voces.forEach(function (v, i) { v.forEach(function (o) { o.frequency.setTargetAtTime(A[i], t, 0.8); }); });
