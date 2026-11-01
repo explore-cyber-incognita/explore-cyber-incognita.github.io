@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cyber Incognita</title>
+  <meta name="description" content="La ciudad amurallada de Kowloon de noche, en neón y lluvia: catorce plantas de ventanas encendidas, aviones rozando las azoteas y diez secretos escondidos.">
+  <meta name="author" content="Pau Morató Sebastià">
+  <meta name="theme-color" content="#07060d">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Cyber Incognita">
+  <meta property="og:description" content="九龍城寨 · La ciudad amurallada: la ciudad que inspiró el cyberpunk, de noche, con neón, lluvia y diez secretos escondidos. Sube a la azotea, baja a la calle… y encuéntralos.">
+  <meta property="og:url" content="https://explore-cyber-incognita.github.io/">
+  <meta property="og:image" content="https://explore-cyber-incognita.github.io/compartir.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="css/estilos.css?v=20261101k">
+</head>
+<body>
+  <canvas id="lienzo" aria-label="La ciudad amurallada de Kowloon de noche, con sus letreros de neón, ventanas encendidas, lluvia y aviones que pasan rozando las azoteas. Arrastra o usa la rueda para subir y bajar por ella."></canvas>
+  <div class="vineta" aria-hidden="true"></div>
+  <div class="grano" aria-hidden="true"></div>
+
+  <div class="cargando" id="cargando" aria-live="polite"><span class="cargando-tubo" aria-hidden="true"></span><span>Encendiendo los neones…</span></div>
+
+  <header class="marca">
+    <h1 class="titulo">Cyber <em><span class="pre">in</span>cognita</em></h1>
+    <p class="sub"><span class="cjk">九龍城寨</span> · La ciudad amurallada</p>
+  </header>
+
+  <button class="b-cuaderno" id="b-cuaderno" type="button" aria-expanded="false" aria-controls="cuaderno">
+    <span class="b-fila"><span class="b-etq">Expediente · Secretos</span><span class="b-cont" id="contador">00/10</span></span>
+    <span class="segmentos" id="segmentos" aria-hidden="true"></span>
+  </button>
+
+  <div class="hud hud-izq" id="hud" aria-hidden="true">
+    <div><span>Planta</span><b id="h-planta">屋頂 · Azotea</b></div>
+    <div><span>Señal</span><b class="barras" id="h-senal"><i></i><i></i><i></i><i></i><i></i></b></div>
+    <div><span>Lluvia</span><b><span class="barras" id="h-lluvia"><i></i><i></i><i></i><i></i><i></i></span><span class="h-txt" id="h-lluvia-txt">lluvia</span></b></div>
+  </div>
+  <div class="hud hud-der"><span id="ayuda">Arrastra o usa la rueda para subir y bajar por la ciudad</span></div>
+  <div class="teclas" id="teclas" aria-hidden="true"></div>
+
+  <aside class="cuaderno" id="cuaderno" aria-hidden="true" aria-labelledby="cuaderno-titulo">
+    <div class="c-cabeza">
+      <div>
+        <p class="c-etq">Expediente 九龍</p>
+        <h2 id="cuaderno-titulo">Los secretos de la ciudad</h2>
+      </div>
+      <button class="c-cerrar" id="cerrar-cuaderno" type="button" aria-label="Cerrar el expediente">✕</button>
+    </div>
+    <p class="c-intro">Diez secretos escondidos entre la azotea y la calle. Unos se ven; otros se tocan, se escriben… o se esperan bajo la lluvia.</p>
+    <ol class="lista" id="lista"></ol>
+    <p class="c-fuentes">Todo dibujado por código. Tipografías: Instrument Serif, IBM Plex Mono y Noto Sans TC (OFL).</p>
+    <p class="c-credito" id="c-credito-linea" hidden>Un juego de <a id="c-credito" target="_blank" rel="noopener"><b id="c-credito-nombre"></b><span class="flecha"> ↗</span></a></p>
+    <div class="c-pie">
+      <button type="button" id="ver-final" class="c-boton" hidden>Volver a ver el final</button>
+      <button type="button" id="borrar" class="c-boton c-boton-tenue">Borrar progreso</button>
+    </div>
+  </aside>
+
+  <section class="tarjeta" id="tarjeta" aria-live="polite">
+    <div class="t-etq" id="t-etq"></div>
+    <h2 class="t-tit" id="t-tit"></h2>
+    <p class="t-txt" id="t-txt"></p>
+    <div class="t-pie" id="t-pie"></div>
+  </section>
+
+  <div class="aviso" id="aviso" role="status"></div>
+  <button class="saltar" id="saltar" type="button">Saltar <kbd>⌫</kbd></button>
+
+  <div class="intro" id="intro" hidden>
+    <div class="intro-caja">
+      <canvas class="intro-medalla" id="intro-medalla" aria-hidden="true"></canvas>
+      <h2>Cyber <em>incognita</em></h2>
+      <p class="intro-sub">九龍城寨 · La ciudad amurallada · Hong Kong</p>
+      <p>La ciudad más densa que ha existido: catorce plantas de ventanas, letreros y cables pegados unos a otros, y los aviones de Kai Tak rozando las azoteas. Esconde diez secretos entre el cielo y la calle. Lo que encuentres quedará anotado en el expediente.</p>
+      <button type="button" id="empezar">Entrar en la ciudad</button>
+    </div>
+  </div>
+
+  <div class="creditos" id="creditos" hidden role="dialog" aria-modal="true" aria-labelledby="creditos-nombre">
+    <div class="creditos-caja">
+      <p class="creditos-etq">Ciudad encendida por</p>
+      <h2 class="creditos-nombre" id="creditos-nombre"></h2>
+      <div class="creditos-linea" aria-hidden="true"></div>
+      <p class="creditos-txt">Gracias por perderte en Kowloon hasta el final.</p>
+      <div class="creditos-botones">
+        <a class="creditos-enlace" id="creditos-enlace" target="_blank" rel="noopener">Ver su LinkedIn <span aria-hidden="true">↗</span></a>
+        <button type="button" class="creditos-cerrar" id="creditos-cerrar">Seguir explorando</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/motor.js?v=20261101k"></script>
+  <script src="js/arte.js?v=20261101k"></script>
+  <script src="js/ciudad.js?v=20261101k"></script>
+  <script src="js/interfaz.js?v=20261101k"></script>
+  <script src="js/vida.js?v=20261101k"></script>
+  <script src="js/escenas.js?v=20261101k"></script>
+  <script src="js/huevos/01-kai-tak.js?v=20261101k"></script>
+  <script src="js/huevos/02-vecinos.js?v=20261101k"></script>
+  <script src="js/huevos/03-blade-runner.js?v=20261101k"></script>
+  <script src="js/huevos/04-canal-muerto.js?v=20261101k"></script>
+  <script src="js/huevos/05-ciberespacio.js?v=20261101k"></script>
+  <script src="js/huevos/06-lluvia-digital.js?v=20261101k"></script>
+  <script src="js/huevos/07-cyberpunk.js?v=20261101k"></script>
+  <script src="js/huevos/08-neo-tokio.js?v=20261101k"></script>
+  <script src="js/huevos/09-neones.js?v=20261101k"></script>
+  <script src="js/huevos/10-derribo.js?v=20261101k"></script>
+  <script src="js/huevos/final.js?v=20261101k"></script>
+  <script src="js/inicio.js?v=20261101k"></script>
+</body>
+</html>
