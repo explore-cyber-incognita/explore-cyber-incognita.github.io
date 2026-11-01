@@ -327,3 +327,10 @@ button:focus-visible { outline: 1px solid var(--acento); outline-offset: 3px; }
   .segmentos { min-width: 64px; }
   .titulo { font-size: 23px; }
 }
+
+/* el botón del sonido: junto al de la bitácora/expediente (sonido.js lo coloca); encendido, la nota en el acento */
+.b-sonido { position: fixed; top: calc(var(--margen) - 4px); right: calc(var(--margen) + 210px); width: 44px; height: 44px; border: 1px solid var(--linea); background: rgba(12, 9, 22, 0.66); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: var(--hueso-3); font-size: 16px; line-height: 1; transition: border-color 0.3s, color 0.3s, opacity 0.6s; }
+.b-sonido:hover { border-color: var(--hueso-3); color: var(--hueso); }
+.b-sonido.activo { color: var(--acento); border-color: var(--acento-2); }
+.b-sonido:not(.activo)::after { content: ""; position: absolute; left: 11px; right: 11px; top: 50%; height: 1px; background: currentColor; transform: rotate(-35deg); }
+.en-escena .b-sonido, .cuaderno-abierto .b-sonido { opacity: 0.35; }

@@ -333,7 +333,7 @@
     var COL = ['#ff2bd6', '#33f0ff', '#ffe14d', '#e8e0ff', '#ff3b4f', null, '#4dff88'];
     for (i = 0; i < 9; i++) GENTE.push({ x: U._h(i * 3.1) * 2.4 - 1.2, dir: i % 2 ? 1 : -1, vel: 0.03 + U._h(i) * 0.025, fase: i, color: COL[i % COL.length], alto: 0.08 + U._h(i * 5) * 0.012 });
   })();
-  var relampago = { t: -1e9 };
+  var relampago = C.relampago = { t: -1e9 };   // (el sonido lee .t para el trueno)
 
   C.actualizar = function (dt) {
     var t = E.t;
